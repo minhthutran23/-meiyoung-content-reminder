@@ -5,9 +5,10 @@ const { parseWorkbook } = require('./parseExcel');
 const SCHEDULE_PATH = path.join(__dirname, '..', 'data', 'schedule.json');
 
 function main() {
-  const [, , filePath, startDate] = process.argv;
-  if (!filePath || !startDate) {
-    console.error('Cach dung: node scripts/convert-excel.js <duong-dan-file.xlsx> <YYYY-MM-DD>');
+  const [, , filePath, startDate, brandKey, brandLabel] = process.argv;
+  if (!filePath || !startDate || !brandKey) {
+    console.error('Cach dung: node scripts/convert-excel.js <file.xlsx> <YYYY-MM-DD> <brandKey> [brandLabel]');
+    console.error('Vi du:     node scripts/convert-excel.js ./thang-10.xlsx 2026-10-14 meiyoung "Diary of Meiyoung"');
     process.exit(1);
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
@@ -32,13 +33,17 @@ function main() {
   const schedule = fs.existsSync(SCHEDULE_PATH)
     ? JSON.parse(fs.readFileSync(SCHEDULE_PATH, 'utf8'))
     : {};
-  schedule[monthKey] = { startDate, rows };
+
+  if (!schedule[brandKey]) schedule[brandKey] = { label: brandLabel || brandKey, months: {} };
+  if (brandLabel) schedule[brandKey].label = brandLabel;
+  schedule[brandKey].months[monthKey] = { startDate, rows };
+
   fs.writeFileSync(SCHEDULE_PATH, JSON.stringify(schedule, null, 2), 'utf8');
 
-  console.log(`✅ Da doc ${rows.length} bai, luu vao data/schedule.json (thang ${monthKey}).`);
+  console.log(`✅ Da doc ${rows.length} bai cho kenh "${schedule[brandKey].label}", luu vao data/schedule.json (thang ${monthKey}).`);
   console.log('\nTiep theo, chay 3 lenh sau de day len GitHub:');
   console.log('  git add data/schedule.json');
-  console.log(`  git commit -m "Cap nhat lich thang ${monthKey}"`);
+  console.log(`  git commit -m "Cap nhat lich ${brandKey} thang ${monthKey}"`);
   console.log('  git push');
 }
 
