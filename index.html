@@ -285,8 +285,8 @@ function checkGoldenHour(time, date, channels){
 
 function pickRandomInWindow([s,e]){
   const totalMinutes = Math.round((e-s)*60);
-  const steps = Math.max(1, Math.floor(totalMinutes/5));
-  const offset = Math.floor(Math.random()*steps)*5;
+  const steps = Math.max(1, Math.floor(totalMinutes/30));
+  const offset = Math.floor(Math.random()*steps)*30;
   const mins = s*60 + offset;
   const hh = Math.floor(mins/60), mm = mins%60;
   return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
@@ -330,6 +330,16 @@ function getAllPostsAcrossPlans(){
     });
   });
   return all;
+}
+
+/* Tach 1 bai co nhieu kenh (vd "YouTube + Facebook") thanh nhieu muc rieng, cung gio, khac nhan "platform" hien thi. */
+function expandByChannel(posts){
+  const out = [];
+  posts.forEach(p=>{
+    const chs = (p.channels && p.channels.length) ? p.channels : [p.platform || '—'];
+    chs.forEach(ch=> out.push({...p, platform: ch}));
+  });
+  return out;
 }
 
 /* ---------- GitHub base64 helpers (an toàn với tiếng Việt / emoji) ---------- */
@@ -429,7 +439,8 @@ function renderLegend(){
 function buildCalendar(){
   const root = document.getElementById('calendar-root'); root.innerHTML='';
   if(DATA.length===0) return;
-  const map={}; DATA.forEach(p=> map[isoDay(p.date)]=p);
+  const expanded = expandByChannel(DATA);
+  const map={}; expanded.forEach(p=> (map[isoDay(p.date)] = map[isoDay(p.date)]||[]).push(p));
   const months=[]; let cur=new Date(DATA[0].date.getFullYear(), DATA[0].date.getMonth(),1);
   const last=DATA[DATA.length-1].date;
   while(cur.getFullYear()<last.getFullYear() || (cur.getFullYear()===last.getFullYear() && cur.getMonth()<=last.getMonth())){
@@ -451,17 +462,17 @@ function buildCalendar(){
       const cellDate=new Date(y,m,day);
       const cell=document.createElement('div'); cell.className='cal-cell'+(isoDay(cellDate)===todayIso?' today':'');
       cell.innerHTML=`<div class="date-num">${day}</div>`;
-      const post=map[isoDay(cellDate)];
-      if(post){
+      const posts=map[isoDay(cellDate)]||[];
+      posts.forEach(post=>{
         const pal=paletteFor(post.macro);
         const chip=document.createElement('div'); chip.className='post-chip';
         chip.style.borderLeftColor=pal.main; chip.style.background=pal.bg;
         const warn = post.goldenNotes && post.goldenNotes.length ? ' ⏱️' : '';
         chip.title = warn ? post.goldenNotes.join(' / ') : '';
-        chip.innerHTML=`<span class="ptime">${post.time}${warn}</span><span class="pidea">${post.idea}</span>`;
+        chip.innerHTML=`<span class="ptime">${post.time} · ${post.platform}${warn}</span><span class="pidea">${post.idea}</span>`;
         chip.onclick=()=>openDetail(post);
         cell.appendChild(chip);
-      }
+      });
       grid.appendChild(cell);
     }
     block.appendChild(grid); root.appendChild(block);
@@ -487,7 +498,8 @@ function startOfWeek(d){
 function buildWeekView(){
   const root = document.getElementById('calendar-root'); root.innerHTML='';
   if(DATA.length===0) return;
-  const map={}; DATA.forEach(p=> map[isoDay(p.date)]=p);
+  const expanded = expandByChannel(DATA);
+  const map={}; expanded.forEach(p=> (map[isoDay(p.date)] = map[isoDay(p.date)]||[]).push(p));
   const weekStart = startOfWeek(cursorDate);
   const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate()+6);
   const todayIso = isoDay(new Date());
@@ -507,16 +519,18 @@ function buildWeekView(){
     const d = new Date(weekStart); d.setDate(d.getDate()+i);
     const col = document.createElement('div'); col.className='week-col'+(isoDay(d)===todayIso?' today':'');
     col.innerHTML = `<div class="wc-head">${WEEKDAY_VN[d.getDay()]}<span class="wc-daynum">${d.getDate()}</span></div>`;
-    const post = map[isoDay(d)];
-    if(post){
-      const pal = paletteFor(post.macro);
-      const warn = post.goldenNotes && post.goldenNotes.length ? ' ⏱️' : '';
-      const chip = document.createElement('div'); chip.className='post-chip';
-      chip.style.borderLeftColor=pal.main; chip.style.background=pal.bg;
-      chip.title = warn ? post.goldenNotes.join(' / ') : '';
-      chip.innerHTML = `<span class="ptime">${post.time}${warn}</span><span class="pidea">${post.idea}</span>`;
-      chip.onclick=()=>openDetail(post);
-      col.appendChild(chip);
+    const posts = map[isoDay(d)] || [];
+    if(posts.length){
+      posts.forEach(post=>{
+        const pal = paletteFor(post.macro);
+        const warn = post.goldenNotes && post.goldenNotes.length ? ' ⏱️' : '';
+        const chip = document.createElement('div'); chip.className='post-chip';
+        chip.style.borderLeftColor=pal.main; chip.style.background=pal.bg;
+        chip.title = warn ? post.goldenNotes.join(' / ') : '';
+        chip.innerHTML = `<span class="ptime">${post.time} · ${post.platform}${warn}</span><span class="pidea">${post.idea}</span>`;
+        chip.onclick=()=>openDetail(post);
+        col.appendChild(chip);
+      });
     } else {
       col.insertAdjacentHTML('beforeend', `<div class="week-empty">—</div>`);
     }
@@ -528,7 +542,8 @@ function buildWeekView(){
 function buildDayView(){
   const root = document.getElementById('calendar-root'); root.innerHTML='';
   if(DATA.length===0) return;
-  const map={}; DATA.forEach(p=> map[isoDay(p.date)]=p);
+  const expanded = expandByChannel(DATA);
+  const map={}; expanded.forEach(p=> (map[isoDay(p.date)] = map[isoDay(p.date)]||[]).push(p));
   const todayIso = isoDay(new Date());
 
   const nav = document.createElement('div'); nav.className='cal-nav';
@@ -541,15 +556,19 @@ function buildDayView(){
   document.getElementById('day-next').onclick=()=>{ cursorDate.setDate(cursorDate.getDate()+1); buildDayView(); };
   document.getElementById('day-today').onclick=()=>{ cursorDate = new Date(); buildDayView(); };
 
-  const post = map[isoDay(cursorDate)];
-  const box = document.createElement('div'); box.className='day-view';
-  if(!post){
+  const posts = map[isoDay(cursorDate)] || [];
+  if(posts.length===0){
+    const box = document.createElement('div'); box.className='day-view';
     box.innerHTML = `<div class="dv-empty">Không có bài nào trong lịch cho ngày này.</div>`;
-  } else {
+    root.appendChild(box);
+    return;
+  }
+  posts.forEach(post=>{
     const pal = paletteFor(post.macro);
     const goldenLine = (post.goldenNotes && post.goldenNotes.length)
       ? `<span style="color:#B44B45;">⏱️ ${post.goldenNotes.join(' — ')}</span>`
       : `<span style="color:#5C7A52;">✅ Trong khung giờ vàng gợi ý</span>`;
+    const box = document.createElement('div'); box.className='day-view'; box.style.marginBottom='14px';
     box.innerHTML = `
       <span class="badge" style="background:${pal.bg}; color:${pal.main};">${post.pillar}</span>
       <div class="dv-idea">${post.idea}</div>
@@ -561,8 +580,8 @@ function buildDayView(){
         <dt>CTA</dt><dd>${post.cta}</dd>
         <dt>Giờ vàng</dt><dd>${goldenLine}</dd>
       </dl>`;
-  }
-  root.appendChild(box);
+    root.appendChild(box);
+  });
 }
 
 function renderCalendarArea(){
@@ -581,14 +600,15 @@ document.querySelectorAll('#cal-subtabs .subtab-btn').forEach(btn=>{
 });
 function buildBoard(){
   const root=document.getElementById('board-root'); root.innerHTML='';
-  const macros=[...new Set(DATA.map(p=>p.macro))].sort((a,b)=>{
-    const da=Math.min(...DATA.filter(p=>p.macro===a).map(p=>p.day));
-    const db=Math.min(...DATA.filter(p=>p.macro===b).map(p=>p.day));
+  const expanded = expandByChannel(DATA);
+  const macros=[...new Set(expanded.map(p=>p.macro))].sort((a,b)=>{
+    const da=Math.min(...expanded.filter(p=>p.macro===a).map(p=>p.day));
+    const db=Math.min(...expanded.filter(p=>p.macro===b).map(p=>p.day));
     return da-db;
   });
   macros.forEach(macro=>{
     const pal=paletteFor(macro);
-    const items=DATA.filter(p=>p.macro===macro);
+    const items=expanded.filter(p=>p.macro===macro);
     const col=document.createElement('div'); col.className='board-col';
     col.innerHTML=`<h3><i class="dot" style="background:${pal.main}"></i> ${macro} <span style="color:var(--ink-soft); font-weight:600; font-size:12px;">(${items.length})</span></h3>`;
     items.forEach(p=>{
@@ -616,7 +636,7 @@ function buildChannelToggle(){
 }
 function buildChannelList(){
   const root=document.getElementById('channel-list'); root.innerHTML='';
-  DATA.filter(p=>p.channels.includes(currentChannel)).forEach(p=>{
+  expandByChannel(DATA).filter(p=>p.platform===currentChannel).forEach(p=>{
     const pal=paletteFor(p.macro);
     const row=document.createElement('div'); row.className='channel-row'; row.style.borderLeftColor=pal.main;
     row.innerHTML=`<div class="cr-date">${fmtDate(p.date)}</div><div class="cr-time">${p.time}</div>
@@ -649,7 +669,7 @@ function openDetail(p){
 function closeDetail(){ document.getElementById('detail').classList.remove('show'); }
 function buildReminderBanner(){
   const root=document.getElementById('reminder-banner'); root.innerHTML='';
-  const all = getAllPostsAcrossPlans();
+  const all = expandByChannel(getAllPostsAcrossPlans());
   const todayIso = isoDay(new Date());
   const tmrw = new Date(); tmrw.setDate(tmrw.getDate()+1);
   const tmrwIso = isoDay(tmrw);
@@ -785,10 +805,10 @@ document.getElementById('confirm-upload-btn').onclick = async ()=>{
     statusEl.className='ok';
     let msg = `✅ Đã điền ${rows.length} bài vào lịch "${brandLabel}" — tháng ${monthKey}. Hệ thống nhắc lịch sẽ tự nhận trong ít phút.`;
     if(autoAssignedList.length){
-      msg += `\n\n🎲 ${autoAssignedList.length} bài không có giờ (hoặc giờ không hợp lệ) trong file — đã tự chọn ngẫu nhiên trong khung giờ vàng:\n` + autoAssignedList.join('\n');
+      msg += `\n\n🎲 Đã tự động chọn giờ vàng cho ${autoAssignedList.length} bài không có giờ (hoặc giờ không hợp lệ) trong file — xem chi tiết trên lịch.`;
     }
     if(advisories.length){
-      msg += `\n\n⏱️ ${advisories.length} bài nằm ngoài khung giờ vàng gợi ý (không bắt buộc đổi, chỉ tham khảo):\n` + advisories.join('\n');
+      msg += `\n\n⏱️ ${advisories.length} bài nằm ngoài khung giờ vàng gợi ý (không bắt buộc đổi, xem biểu tượng ⏱️ trên lịch).`;
     }
     statusEl.textContent = msg;
     populateBrandSelect(); document.getElementById('brand-select').value = brandKey;
