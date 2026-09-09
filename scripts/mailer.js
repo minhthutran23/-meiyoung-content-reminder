@@ -14,9 +14,10 @@ function buildTransport() {
 
 async function sendReminder(post) {
   const transport = buildTransport();
-  const subject = `🔔 Đến giờ đăng bài — ${post.idea}`;
+  const subject = `🔔 [${post.brandLabel}] Đến giờ đăng bài — ${post.idea}`;
   const html = `
     <div style="font-family:sans-serif; max-width:520px;">
+      <p style="text-transform:uppercase; letter-spacing:.04em; font-size:12px; font-weight:700; color:#888; margin:0 0 4px;">${post.brandLabel}</p>
       <h2 style="margin-bottom:4px;">${post.idea}</h2>
       <p style="color:#666; margin-top:0;">Ngày ${post.day} · ${post.time} · ${post.platform}</p>
       <p><b>Pillar:</b> ${post.pillar}<br><b>Định dạng:</b> ${post.format}</p>
