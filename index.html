@@ -5,6 +5,7 @@
 <title>Diary of Meiyoung — Content Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --cream:#F6EFE2; --cream-card:#FFFCF5; --ink:#3A2A1E; --ink-soft:#6B5A4A; --line:#E4D8C4; --radius:10px;
@@ -19,7 +20,9 @@
   header.top .title{font-family:'Fraunces',serif; font-weight:500; font-size:28px; line-height:1.1;}
   header.top .title small{display:block; font-family:'Nunito Sans'; font-size:13px; color:var(--ink-soft); font-weight:600; margin-top:5px;}
   .top-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
-  select{font-family:'Nunito Sans'; font-weight:700; font-size:13px; border-radius:999px; border:1.5px solid var(--line); background:var(--cream-card); color:var(--ink); padding:9px 16px;}
+  select, .btn, input{font-family:'Nunito Sans'; font-weight:700; font-size:13px; border-radius:999px; border:1.5px solid var(--line); background:var(--cream-card); color:var(--ink); padding:9px 16px;}
+  .btn{cursor:pointer;}
+  .btn.primary{background:var(--ink); color:var(--cream-card); border-color:var(--ink);}
   .tabs{display:flex; gap:6px; background:var(--cream-card); border:1px solid var(--line); border-radius:999px; padding:4px;}
   .tab-btn{border:none; background:transparent; padding:9px 16px; border-radius:999px; font-family:'Nunito Sans'; font-weight:700; font-size:13px; color:var(--ink-soft); cursor:pointer;}
   .tab-btn.active{background:var(--ink); color:var(--cream-card);}
@@ -40,6 +43,22 @@
   .empty-state{text-align:center; padding:60px 20px; background:var(--cream-card); border:2px dashed var(--line); border-radius:16px;}
   .empty-state h2{font-family:'Fraunces',serif; font-weight:600; font-size:20px; margin:0 0 8px;}
   .empty-state p{color:var(--ink-soft); font-size:14px; margin:0;}
+
+  .upload-panel{display:none; background:var(--cream-card); border:1.5px solid var(--line); border-radius:14px; padding:20px; margin-bottom:20px;}
+  .upload-panel.show{display:block;}
+  .upload-panel h3{font-family:'Fraunces',serif; font-weight:600; font-size:17px; margin:0 0 6px;}
+  .upload-panel .sub{font-size:12px; color:var(--ink-soft); margin:0 0 14px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:12px; font-weight:800; color:var(--ink-soft); margin-bottom:5px;}
+  .field input[type=password], .field input[type=text], .field input[type=date], .field input[type=file]{
+    width:100%; border-radius:8px; padding:8px 10px; font-weight:600;
+  }
+  .field-row{display:flex; gap:14px; flex-wrap:wrap;}
+  .field-row > div{flex:1; min-width:200px;}
+  .checkbox-row{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--ink-soft); font-weight:600; margin-bottom:14px;}
+  #upload-status{font-size:13px; font-weight:700; margin-top:6px; white-space:pre-line;}
+  #upload-status.err{color:#B44B45;}
+  #upload-status.ok{color:#5C7A52;}
 
   .month-block{margin-bottom:30px;}
   .month-label{font-family:'Fraunces',serif; font-size:19px; font-weight:600; margin-bottom:10px;}
@@ -99,10 +118,11 @@
 
   <header class="top">
     <div class="title">Diary of Meiyoung
-      <small>Content Planner — đọc trực tiếp từ data/schedule.json trên GitHub</small>
+      <small>Content Planner — upload Excel, tự điền lịch, tự nhắc email</small>
     </div>
     <div class="top-actions">
       <select id="month-select"></select>
+      <button class="btn primary" id="upload-toggle-btn">+ Tải file tháng mới</button>
       <div class="tabs">
         <button class="tab-btn active" data-view="calendar">Lịch đăng bài</button>
         <button class="tab-btn" data-view="board">Bảng nội dung</button>
@@ -111,14 +131,42 @@
     </div>
   </header>
 
+  <div class="upload-panel" id="upload-panel">
+    <h3>Tải file Excel cho một tháng</h3>
+    <p class="sub">Trang sẽ tự đọc file, ghép vào lịch và lưu thẳng lên GitHub — vài phút sau hệ thống nhắc lịch sẽ tự nhận ra bài mới.</p>
+
+    <div class="field">
+      <label>GitHub Personal Access Token (chỉ lưu trên trình duyệt này, không gửi đi đâu khác)</label>
+      <input type="password" id="pat-input" placeholder="github_pat_...">
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="pat-remember"> <label for="pat-remember">Lưu token trên trình duyệt này cho lần sau</label>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>File Excel (.xlsx)</label>
+        <input type="file" id="file-input" accept=".xlsx,.xls">
+      </div>
+      <div class="field">
+        <label>Ngày đăng bài đầu tiên (Ngày 1)</label>
+        <input type="date" id="start-date-input">
+      </div>
+    </div>
+
+    <button class="btn primary" id="confirm-upload-btn">Điền vào lịch & lưu lên GitHub</button>
+    <button class="btn" onclick="toggleUploadPanel(false)">Hủy</button>
+    <div id="upload-status"></div>
+  </div>
+
   <div id="reminder-banner"></div>
-  <p class="note">🔔 Việc gửi email nhắc lịch do GitHub Actions tự chạy nền — trang này chỉ để bạn xem lại lịch, không cần mở trang này để nhận nhắc.</p>
+  <p class="note">🔔 Việc gửi email nhắc lịch do GitHub Actions tự chạy nền, không cần mở trang này để nhận nhắc.</p>
 
   <div class="legend" id="legend-root"></div>
 
   <div id="empty-state" class="empty-state" style="display:none;">
     <h2>Chưa có dữ liệu</h2>
-    <p>Chưa tìm thấy lịch trong data/schedule.json, hoặc file đang rỗng ({}).</p>
+    <p>Bấm "+ Tải file tháng mới" để bắt đầu.</p>
   </div>
 
   <section class="view active" id="view-calendar"><div id="calendar-root"></div></section>
@@ -148,6 +196,13 @@
 </div>
 
 <script>
+/* ====== CHỈNH 2 DÒNG NÀY NẾU BẠN ĐỔI TÊN REPO / TÀI KHOẢN ====== */
+const GH_OWNER = 'minhthutran23';
+const GH_REPO  = '-meiyoung-content-reminder';
+/* ================================================================ */
+const GH_FILE_PATH = 'data/schedule.json';
+const GH_API = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE_PATH}`;
+
 const PALETTE = [
   {main:'#74815B', bg:'#E7EBDD'}, {main:'#C9707C', bg:'#F5DEE1'}, {main:'#C98A2C', bg:'#F3E3C4'},
   {main:'#4F7B7D', bg:'#DDEAE9'}, {main:'#8574A6', bg:'#E7E1F0'}, {main:'#B98D5E', bg:'#EFE1CE'}
@@ -159,8 +214,8 @@ const CHANNEL_ICON={Facebook:'📘', YouTube:'▶️', TikTok:'🎵', Instagram:
 
 function fmtDate(d){ return `${WEEKDAY_VN[d.getDay()]}, ${d.getDate()}/${d.getMonth()+1}`; }
 function isoDay(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-function getMacro(pillar){ return pillar.includes('/') ? pillar.split('/')[0].trim() : pillar.trim(); }
-function getChannels(platform){ return platform.split(/\+|,|&/).map(s=>s.trim()).filter(Boolean); }
+function getMacro(pillar){ return (pillar||'').includes('/') ? pillar.split('/')[0].trim() : (pillar||'').trim(); }
+function getChannels(platform){ return (platform||'').split(/\+|,|&/).map(s=>s.trim()).filter(Boolean); }
 
 let ALL_PLANS = {};
 let CURRENT_KEY = null;
@@ -170,7 +225,7 @@ function rowsToPosts(planObj){
   const start = new Date(planObj.startDate+'T00:00:00');
   return planObj.rows.map(row=>{
     const d = new Date(start); d.setDate(d.getDate() + (Number(row.day)-1));
-    return {...row, day:Number(row.day), date:d, macro:getMacro(row.pillar||''), channels:getChannels(row.platform||'')};
+    return {...row, day:Number(row.day), date:d, macro:getMacro(row.pillar), channels:getChannels(row.platform)};
   });
 }
 function getAllPostsAcrossPlans(){
@@ -179,6 +234,46 @@ function getAllPostsAcrossPlans(){
   return all;
 }
 
+/* ---------- GitHub base64 helpers (an toàn với tiếng Việt / emoji) ---------- */
+function b64EncodeUnicode(str){
+  const bytes = new TextEncoder().encode(str);
+  let binary=''; bytes.forEach(b=> binary += String.fromCharCode(b));
+  return btoa(binary);
+}
+function b64DecodeUnicode(b64){
+  const binary = atob(b64.replace(/\n/g,''));
+  const bytes = Uint8Array.from(binary, c=>c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+async function fetchScheduleFromGitHub(){
+  const res = await fetch(GH_API + '?_=' + Date.now());
+  if(!res.ok) throw new Error('Khong tai duoc du lieu tu GitHub (HTTP '+res.status+')');
+  const data = await res.json();
+  const content = b64DecodeUnicode(data.content);
+  return { schedule: JSON.parse(content), sha: data.sha };
+}
+
+async function saveScheduleToGitHub(schedule, sha, token, monthKey){
+  const body = {
+    message: `Cap nhat lich thang ${monthKey}`,
+    content: b64EncodeUnicode(JSON.stringify(schedule, null, 2)),
+    sha,
+    branch: 'main',
+  };
+  const res = await fetch(GH_API, {
+    method: 'PUT',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Accept':'application/vnd.github+json' },
+    body: JSON.stringify(body),
+  });
+  if(!res.ok){
+    const err = await res.json().catch(()=>({}));
+    throw new Error(`GitHub tu choi (HTTP ${res.status}): ${err.message||'khong ro ly do'}`);
+  }
+  return res.json();
+}
+
+/* ---------- rendering (giống bản trước) ---------- */
 function populateMonthSelect(){
   const sel = document.getElementById('month-select'); sel.innerHTML='';
   const keys = Object.keys(ALL_PLANS).sort();
@@ -193,18 +288,15 @@ function populateMonthSelect(){
   sel.value = CURRENT_KEY;
   sel.onchange = ()=>{ CURRENT_KEY = sel.value; renderAll(); };
 }
-
 function renderLegend(){
   const root = document.getElementById('legend-root'); root.innerHTML='';
-  const macros = [...new Set(DATA.map(p=>p.macro))];
-  macros.forEach(m=>{
+  [...new Set(DATA.map(p=>p.macro))].forEach(m=>{
     const pal = paletteFor(m);
     const span = document.createElement('span');
     span.innerHTML = `<i class="dot" style="background:${pal.main}"></i> ${m}`;
     root.appendChild(span);
   });
 }
-
 function buildCalendar(){
   const root = document.getElementById('calendar-root'); root.innerHTML='';
   if(DATA.length===0) return;
@@ -244,7 +336,6 @@ function buildCalendar(){
     block.appendChild(grid); root.appendChild(block);
   });
 }
-
 function buildBoard(){
   const root=document.getElementById('board-root'); root.innerHTML='';
   const macros=[...new Set(DATA.map(p=>p.macro))].sort((a,b)=>{
@@ -267,7 +358,6 @@ function buildBoard(){
     root.appendChild(col);
   });
 }
-
 let currentChannel=null;
 function buildChannelToggle(){
   const root=document.getElementById('channel-toggle'); root.innerHTML='';
@@ -292,7 +382,6 @@ function buildChannelList(){
     root.appendChild(row);
   });
 }
-
 function openDetail(p){
   const pal=paletteFor(p.macro);
   const badge=document.getElementById('d-badge');
@@ -307,27 +396,23 @@ function openDetail(p){
   document.getElementById('detail').scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 function closeDetail(){ document.getElementById('detail').classList.remove('show'); }
-
 function buildReminderBanner(){
   const root=document.getElementById('reminder-banner'); root.innerHTML='';
   const all = getAllPostsAcrossPlans();
   const todayIso = isoDay(new Date());
   const tmrw = new Date(); tmrw.setDate(tmrw.getDate()+1);
   const tmrwIso = isoDay(tmrw);
-  const todays = all.filter(p=>isoDay(p.date)===todayIso);
-  const tmrws = all.filter(p=>isoDay(p.date)===tmrwIso);
-  todays.forEach(p=>{
+  all.filter(p=>isoDay(p.date)===todayIso).forEach(p=>{
     const el=document.createElement('div'); el.className='reminder-item';
     el.innerHTML=`<span class="rb-tag">HÔM NAY</span><span class="rb-body">${p.idea} — ${p.platform}</span><span class="rb-time">${p.time}</span>`;
     root.appendChild(el);
   });
-  tmrws.forEach(p=>{
+  all.filter(p=>isoDay(p.date)===tmrwIso).forEach(p=>{
     const el=document.createElement('div'); el.className='reminder-item'; el.style.borderLeftColor='var(--ink-soft)';
     el.innerHTML=`<span class="rb-tag" style="color:var(--ink-soft)">NGÀY MAI</span><span class="rb-body">${p.idea} — ${p.platform}</span><span class="rb-time">${p.time}</span>`;
     root.appendChild(el);
   });
 }
-
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.onclick=()=>{
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -337,17 +422,100 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     closeDetail();
   };
 });
-
 function renderAll(){
   const plan = ALL_PLANS[CURRENT_KEY];
+  document.getElementById('empty-state').style.display = plan ? 'none' : 'block';
   DATA = plan ? rowsToPosts(plan) : [];
   renderLegend(); buildCalendar(); buildBoard(); buildChannelToggle(); buildChannelList(); buildReminderBanner();
 }
 
+/* ---------- upload ---------- */
+function toggleUploadPanel(show){
+  document.getElementById('upload-panel').classList.toggle('show', show);
+  document.getElementById('upload-status').textContent='';
+}
+document.getElementById('upload-toggle-btn').onclick = ()=>{
+  toggleUploadPanel(true);
+  const saved = localStorage.getItem('meiyoung_gh_pat');
+  if(saved){ document.getElementById('pat-input').value = saved; document.getElementById('pat-remember').checked = true; }
+};
+
+document.getElementById('confirm-upload-btn').onclick = async ()=>{
+  const token = document.getElementById('pat-input').value.trim();
+  const remember = document.getElementById('pat-remember').checked;
+  const fileInput = document.getElementById('file-input');
+  const dateInput = document.getElementById('start-date-input');
+  const statusEl = document.getElementById('upload-status');
+  statusEl.className=''; statusEl.textContent='';
+
+  if(!token){ statusEl.className='err'; statusEl.textContent='Thiếu Personal Access Token.'; return; }
+  if(!fileInput.files[0]){ statusEl.className='err'; statusEl.textContent='Vui lòng chọn file Excel.'; return; }
+  if(!dateInput.value){ statusEl.className='err'; statusEl.textContent='Vui lòng chọn ngày đăng bài đầu tiên.'; return; }
+
+  statusEl.textContent = 'Đang xử lý...';
+  try{
+    if(remember) localStorage.setItem('meiyoung_gh_pat', token); else localStorage.removeItem('meiyoung_gh_pat');
+
+    const buf = await fileInput.files[0].arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    const sheetName = wb.SheetNames.find(n=>/content.*plan|30.*day/i.test(n)) || wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const raw = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''});
+    const header = raw[0].map(h=>String(h).trim().toLowerCase());
+    const col = {};
+    header.forEach((h,i)=>{
+      if(h==='day') col.day=i;
+      else if(h==='platform') col.platform=i;
+      else if(h.includes('pillar')) col.pillar=i;
+      else if(h==='format') col.format=i;
+      else if(h==='content idea') col.idea=i;
+      else if(h==='visual idea') col.visual=i;
+      else if(h.startsWith('caption')) col.caption=i;
+      else if(h==='cta') col.cta=i;
+      else if(h==='status') col.status=i;
+      else if(h==='time') col.time=i;
+    });
+    if(col.day===undefined || col.idea===undefined){
+      throw new Error('Không tìm thấy cột "Day" và "Content idea" — kiểm tra lại tiêu đề cột.');
+    }
+    if(col.time===undefined){
+      throw new Error('File chưa có cột "Time" (HH:mm) — thêm cột này để hệ thống biết giờ nhắc.');
+    }
+    const rows = raw.slice(1).filter(r=>r[col.day]!=='' && r[col.day]!=null).map(r=>({
+      day: Number(r[col.day]), platform: r[col.platform]||'', pillar: r[col.pillar]||'',
+      format: r[col.format]||'', idea: r[col.idea]||'', visual: r[col.visual]||'',
+      caption: r[col.caption]||'', cta: r[col.cta]||'',
+      status: col.status!==undefined ? (r[col.status]||'') : '',
+      time: String(r[col.time]||'').trim(),
+    }));
+    const badTime = rows.find(r=>!/^\d{1,2}:\d{2}$/.test(r.time));
+    if(badTime) throw new Error(`Giờ đăng của Ngày ${badTime.day} sai định dạng HH:mm: "${badTime.time}"`);
+
+    statusEl.textContent = 'Đang lấy dữ liệu hiện tại từ GitHub...';
+    const { schedule, sha } = await fetchScheduleFromGitHub();
+
+    const monthKey = dateInput.value.slice(0,7);
+    schedule[monthKey] = { startDate: dateInput.value, rows };
+
+    statusEl.textContent = 'Đang lưu lên GitHub...';
+    await saveScheduleToGitHub(schedule, sha, token, monthKey);
+
+    ALL_PLANS = schedule;
+    statusEl.className='ok'; statusEl.textContent=`✅ Đã điền ${rows.length} bài vào lịch tháng ${monthKey}. Hệ thống nhắc lịch sẽ tự nhận trong ít phút.`;
+    populateMonthSelect(); document.getElementById('month-select').value = monthKey; CURRENT_KEY = monthKey;
+    renderAll();
+    setTimeout(()=>toggleUploadPanel(false), 2000);
+  }catch(err){
+    console.error(err);
+    statusEl.className='err'; statusEl.textContent='❌ '+err.message;
+  }
+};
+
+/* ---------- init ---------- */
 (async function init(){
   try{
-    const res = await fetch('./data/schedule.json?_=' + Date.now());
-    ALL_PLANS = await res.json();
+    const { schedule } = await fetchScheduleFromGitHub();
+    ALL_PLANS = schedule;
   }catch(e){ ALL_PLANS = {}; }
   const hasData = Object.keys(ALL_PLANS).length > 0;
   document.getElementById('empty-state').style.display = hasData ? 'none' : 'block';
