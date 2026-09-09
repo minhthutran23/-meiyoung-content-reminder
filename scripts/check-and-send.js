@@ -1,12 +1,12 @@
 const fs = require('fs');
 const path = require('path');
-const { sendReminder } = require('./mailer');
+const { sendDailyDigest, sendWeeklyDigest } = require('./mailer');
 
 const SCHEDULE_PATH = path.join(__dirname, '..', 'data', 'schedule.json');
 const SENT_LOG_PATH = path.join(__dirname, '..', 'data', 'sent.json');
 
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
-const TOLERANCE_MINUTES = 14;
+const WEEKDAY_VN = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
 function readJson(p, fallback) {
   if (!fs.existsSync(p)) return fallback;
@@ -18,16 +18,17 @@ function writeJson(p, data) {
 function isoDateVN(d) {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
 }
+function labelDateVN(d) {
+  return `${WEEKDAY_VN[d.getUTCDay()]}, ${d.getUTCDate()}/${d.getUTCMonth() + 1}/${d.getUTCFullYear()}`;
+}
+function getChannels(platform) {
+  return (platform || '').split(/\+|,|&/).map((s) => s.trim()).filter(Boolean);
+}
 
 /**
  * Cau truc data/schedule.json (nhieu kenh):
- * {
- *   "<brandKey>": {
- *     "label": "Ten hien thi cua kenh",
- *     "months": { "<YYYY-MM>": { "startDate": "...", "rows": [...] } }
- *   },
- *   ...
- * }
+ * { "<brandKey>": { "label": "...", "months": { "<YYYY-MM>": { "startDate": "...", "rows": [...] } } } }
+ * Tra ve mang bai da "gian" theo tung nen tang (mot dong co 2 kenh -> 2 muc rieng), kem ngay thuc te (UTC, dai dien cho ngay VN).
  */
 function getAllPosts(fullSchedule) {
   let all = [];
@@ -38,44 +39,80 @@ function getAllPosts(fullSchedule) {
       plan.rows.forEach((row) => {
         const d = new Date(start);
         d.setUTCDate(d.getUTCDate() + (row.day - 1));
-        const [hh, mm] = row.time.split(':').map(Number);
-        d.setUTCHours(hh, mm, 0, 0);
-        all.push({ ...row, brandKey, brandLabel, monthKey, scheduledVN: d });
+        const channels = getChannels(row.platform);
+        (channels.length ? channels : [row.platform || '—']).forEach((ch) => {
+          all.push({ ...row, platform: ch, brandKey, brandLabel, monthKey, date: d });
+        });
       });
     });
   });
   return all;
 }
 
+function startOfWeekUTC(d) {
+  const r = new Date(d);
+  const wd = r.getUTCDay();
+  const diff = wd === 0 ? -6 : 1 - wd; // Thu 2 la dau tuan
+  r.setUTCDate(r.getUTCDate() + diff);
+  r.setUTCHours(0, 0, 0, 0);
+  return r;
+}
+
 async function main() {
   const nowVN = new Date(Date.now() + VN_OFFSET_MS);
+  const todayIso = isoDateVN(nowVN);
   const fullSchedule = readJson(SCHEDULE_PATH, {});
   const sentLog = readJson(SENT_LOG_PATH, {});
-  const posts = getAllPosts(fullSchedule);
+  const allPosts = getAllPosts(fullSchedule);
+  let changed = false;
 
-  const due = posts.filter((p) => {
-    const diffMin = (nowVN.getTime() - p.scheduledVN.getTime()) / 60000;
-    return diffMin >= 0 && diffMin <= TOLERANCE_MINUTES;
-  });
-
-  if (due.length === 0) {
-    console.log(`[check] ${nowVN.toISOString()} (VN) — khong co bai nao den gio.`);
-    return;
+  // ---- Bao sang (hom nay) ----
+  const dailyKey = `daily-${todayIso}`;
+  if (!sentLog[dailyKey]) {
+    const todays = allPosts
+      .filter((p) => isoDateVN(p.date) === todayIso)
+      .sort((a, b) => a.time.localeCompare(b.time));
+    if (todays.length > 0) {
+      try {
+        await sendDailyDigest(labelDateVN(nowVN), todays);
+        console.log(`[check] Da gui bao sang cho ${todayIso} (${todays.length} bai).`);
+      } catch (err) {
+        console.error('[check] Gui bao sang that bai:', err.message);
+      }
+    } else {
+      console.log(`[check] Hom nay (${todayIso}) khong co bai nao — khong gui bao sang.`);
+    }
+    sentLog[dailyKey] = true;
+    changed = true;
   }
 
-  let changed = false;
-  for (const post of due) {
-    const sentKey = `${post.brandKey}-${post.monthKey}-day${post.day}-${isoDateVN(post.scheduledVN)}`;
-    if (sentLog[sentKey]) continue;
-    try {
-      await sendReminder({ ...post, date: post.scheduledVN });
-      sentLog[sentKey] = true;
+  // ---- Bao tuan (chi sang Thu 2, gio VN) ----
+  if (nowVN.getUTCDay() === 1) {
+    const weekStart = startOfWeekUTC(nowVN);
+    const weekStartIso = isoDateVN(weekStart);
+    const weeklyKey = `weekly-${weekStartIso}`;
+    if (!sentLog[weeklyKey]) {
+      const postsByDate = {};
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(weekStart); d.setUTCDate(d.getUTCDate() + i);
+        const iso = isoDateVN(d);
+        postsByDate[labelDateVN(d)] = allPosts
+          .filter((p) => isoDateVN(p.date) === iso)
+          .sort((a, b) => a.time.localeCompare(b.time));
+      }
+      const weekEnd = new Date(weekStart); weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+      const weekLabel = `${weekStart.getUTCDate()}/${weekStart.getUTCMonth() + 1} – ${weekEnd.getUTCDate()}/${weekEnd.getUTCMonth() + 1}`;
+      try {
+        await sendWeeklyDigest(weekLabel, postsByDate);
+        console.log(`[check] Da gui bao tuan cho tuan ${weekStartIso}.`);
+      } catch (err) {
+        console.error('[check] Gui bao tuan that bai:', err.message);
+      }
+      sentLog[weeklyKey] = true;
       changed = true;
-      console.log(`[check] Da gui nhac lich: [${post.brandLabel}] Ngay ${post.day} — ${post.idea}`);
-    } catch (err) {
-      console.error(`[check] Gui that bai [${post.brandLabel}] Ngay ${post.day}:`, err.message);
     }
   }
+
   if (changed) writeJson(SENT_LOG_PATH, sentLog);
 }
 
