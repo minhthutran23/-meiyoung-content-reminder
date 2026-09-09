@@ -19,16 +19,29 @@ function isoDateVN(d) {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
 }
 
-function getAllPosts(schedule) {
+/**
+ * Cau truc data/schedule.json (nhieu kenh):
+ * {
+ *   "<brandKey>": {
+ *     "label": "Ten hien thi cua kenh",
+ *     "months": { "<YYYY-MM>": { "startDate": "...", "rows": [...] } }
+ *   },
+ *   ...
+ * }
+ */
+function getAllPosts(fullSchedule) {
   let all = [];
-  Object.entries(schedule).forEach(([monthKey, plan]) => {
-    const start = new Date(plan.startDate + 'T00:00:00Z');
-    plan.rows.forEach((row) => {
-      const d = new Date(start);
-      d.setUTCDate(d.getUTCDate() + (row.day - 1));
-      const [hh, mm] = row.time.split(':').map(Number);
-      d.setUTCHours(hh, mm, 0, 0);
-      all.push({ ...row, monthKey, scheduledVN: d });
+  Object.entries(fullSchedule).forEach(([brandKey, brand]) => {
+    const brandLabel = brand.label || brandKey;
+    Object.entries(brand.months || {}).forEach(([monthKey, plan]) => {
+      const start = new Date(plan.startDate + 'T00:00:00Z');
+      plan.rows.forEach((row) => {
+        const d = new Date(start);
+        d.setUTCDate(d.getUTCDate() + (row.day - 1));
+        const [hh, mm] = row.time.split(':').map(Number);
+        d.setUTCHours(hh, mm, 0, 0);
+        all.push({ ...row, brandKey, brandLabel, monthKey, scheduledVN: d });
+      });
     });
   });
   return all;
@@ -36,9 +49,9 @@ function getAllPosts(schedule) {
 
 async function main() {
   const nowVN = new Date(Date.now() + VN_OFFSET_MS);
-  const schedule = readJson(SCHEDULE_PATH, {});
+  const fullSchedule = readJson(SCHEDULE_PATH, {});
   const sentLog = readJson(SENT_LOG_PATH, {});
-  const posts = getAllPosts(schedule);
+  const posts = getAllPosts(fullSchedule);
 
   const due = posts.filter((p) => {
     const diffMin = (nowVN.getTime() - p.scheduledVN.getTime()) / 60000;
@@ -52,15 +65,15 @@ async function main() {
 
   let changed = false;
   for (const post of due) {
-    const sentKey = `${post.monthKey}-day${post.day}-${isoDateVN(post.scheduledVN)}`;
+    const sentKey = `${post.brandKey}-${post.monthKey}-day${post.day}-${isoDateVN(post.scheduledVN)}`;
     if (sentLog[sentKey]) continue;
     try {
       await sendReminder({ ...post, date: post.scheduledVN });
       sentLog[sentKey] = true;
       changed = true;
-      console.log(`[check] Da gui nhac lich: Ngay ${post.day} — ${post.idea}`);
+      console.log(`[check] Da gui nhac lich: [${post.brandLabel}] Ngay ${post.day} — ${post.idea}`);
     } catch (err) {
-      console.error(`[check] Gui that bai cho Ngay ${post.day}:`, err.message);
+      console.error(`[check] Gui that bai [${post.brandLabel}] Ngay ${post.day}:`, err.message);
     }
   }
   if (changed) writeJson(SENT_LOG_PATH, sentLog);
