@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Diary of Meiyoung — Content Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F6EFE2; --cream-card:#FFFCF5; --ink:#3A2A1E; --ink-soft:#6B5A4A; --line:#E4D8C4; --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--cream); color:var(--ink); font-family:'Nunito Sans',sans-serif; padding:26px 20px 60px;}
+  .wrap{max-width:1180px; margin:0 auto;}
+
+  header.top{display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:14px;
+    border-bottom:2px solid var(--line); padding-bottom:16px; margin-bottom:16px;}
+  header.top .title{font-family:'Fraunces',serif; font-weight:500; font-size:28px; line-height:1.1;}
+  header.top .title small{display:block; font-family:'Nunito Sans'; font-size:13px; color:var(--ink-soft); font-weight:600; margin-top:5px;}
+  .top-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  select{font-family:'Nunito Sans'; font-weight:700; font-size:13px; border-radius:999px; border:1.5px solid var(--line); background:var(--cream-card); color:var(--ink); padding:9px 16px;}
+  .tabs{display:flex; gap:6px; background:var(--cream-card); border:1px solid var(--line); border-radius:999px; padding:4px;}
+  .tab-btn{border:none; background:transparent; padding:9px 16px; border-radius:999px; font-family:'Nunito Sans'; font-weight:700; font-size:13px; color:var(--ink-soft); cursor:pointer;}
+  .tab-btn.active{background:var(--ink); color:var(--cream-card);}
+
+  #reminder-banner{margin-bottom:18px;}
+  .reminder-item{display:flex; align-items:center; gap:12px; background:var(--cream-card); border:1.5px solid var(--line); border-left:5px solid #5C7A52; border-radius:10px; padding:12px 16px; margin-bottom:8px;}
+  .reminder-item .rb-tag{font-weight:800; font-size:12px; color:#5C7A52; flex:0 0 auto;}
+  .reminder-item .rb-body{font-size:14px; flex:1;}
+  .reminder-item .rb-time{font-weight:800; font-size:13px; color:var(--ink-soft); flex:0 0 auto;}
+  .note{font-size:12px; color:var(--ink-soft); margin:-8px 0 18px;}
+
+  .legend{display:flex; gap:16px; flex-wrap:wrap; margin-bottom:18px; font-size:13px; font-weight:700; color:var(--ink-soft);}
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
+
+  section.view{display:none;} section.view.active{display:block;}
+
+  .empty-state{text-align:center; padding:60px 20px; background:var(--cream-card); border:2px dashed var(--line); border-radius:16px;}
+  .empty-state h2{font-family:'Fraunces',serif; font-weight:600; font-size:20px; margin:0 0 8px;}
+  .empty-state p{color:var(--ink-soft); font-size:14px; margin:0;}
+
+  .month-block{margin-bottom:30px;}
+  .month-label{font-family:'Fraunces',serif; font-size:19px; font-weight:600; margin-bottom:10px;}
+  .weekday-row{display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:6px;}
+  .weekday-row div{font-size:12px; font-weight:800; color:var(--ink-soft); text-align:center;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:8px;}
+  .cal-cell{min-height:104px; background:var(--cream-card); border:1px solid var(--line); border-radius:var(--radius); padding:8px; position:relative;}
+  .cal-cell.empty{background:transparent; border:none;}
+  .cal-cell.today{outline:2px solid var(--ink);}
+  .cal-cell .date-num{font-size:12px; font-weight:800; color:var(--ink-soft); margin-bottom:6px;}
+  .post-chip{border-radius:8px; padding:6px 7px; cursor:pointer; font-size:12px; line-height:1.3; border-left:4px solid;}
+  .post-chip .ptime{font-weight:800; display:block; margin-bottom:2px;}
+  .post-chip .pidea{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+  .board{display:flex; gap:16px; overflow-x:auto; padding-bottom:10px;}
+  .board-col{flex:0 0 260px; background:var(--cream-card); border:1px solid var(--line); border-radius:12px; padding:12px;}
+  .board-col h3{font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:2px 0 12px 4px; display:flex; align-items:center; gap:8px;}
+  .board-card{background:var(--cream); border-radius:9px; padding:10px; margin-bottom:10px; cursor:pointer; border-left:4px solid;}
+  .board-card .bc-top{display:flex; justify-content:space-between; font-size:11px; font-weight:800; color:var(--ink-soft); margin-bottom:4px;}
+  .board-card .bc-idea{font-weight:700; font-size:13px; margin-bottom:4px;}
+  .board-card .bc-format{font-size:11px; color:var(--ink-soft);}
+
+  .channel-toggle{display:flex; gap:14px; margin-bottom:22px; flex-wrap:wrap;}
+  .channel-card{flex:1 1 220px; background:var(--cream-card); border:2px solid var(--line); border-radius:14px; padding:16px 18px; cursor:pointer;}
+  .channel-card.active{border-color:var(--ink); background:var(--ink); color:var(--cream-card);}
+  .channel-card .cc-icon{font-size:22px; margin-bottom:6px; display:block;}
+  .channel-card .cc-name{font-family:'Fraunces',serif; font-size:17px; font-weight:600;}
+  .channel-card .cc-count{font-size:12px; font-weight:700; opacity:.75; margin-top:2px;}
+  .channel-row{display:flex; align-items:center; gap:14px; background:var(--cream-card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:8px; cursor:pointer; border-left:4px solid;}
+  .channel-row .cr-date{flex:0 0 96px; font-size:12px; font-weight:800; color:var(--ink-soft);}
+  .channel-row .cr-time{flex:0 0 56px; font-size:12px; font-weight:800; color:var(--ink-soft);}
+  .channel-row .cr-main{flex:1;}
+  .channel-row .cr-idea{font-weight:700; font-size:14px;}
+  .channel-row .cr-sub{font-size:12px; color:var(--ink-soft); margin-top:2px;}
+
+  .detail{margin-top:24px; background:var(--cream-card); border:1px solid var(--line); border-radius:14px; padding:20px 22px; display:none;}
+  .detail.show{display:block;}
+  .detail .dhead{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:12px;}
+  .detail .dhead h2{font-family:'Fraunces',serif; font-weight:600; font-size:20px; margin:0;}
+  .detail .dmeta{font-size:12px; font-weight:700; color:var(--ink-soft); margin-top:4px;}
+  .detail .close-btn{background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-soft); line-height:1;}
+  .detail dl{display:grid; grid-template-columns:110px 1fr; gap:8px 14px; font-size:14px;}
+  .detail dt{font-weight:800; color:var(--ink-soft);}
+  .detail dd{margin:0;}
+  .badge{display:inline-block; font-size:11px; font-weight:800; padding:3px 9px; border-radius:999px; margin-right:6px;}
+
+  @media (max-width:720px){
+    .cal-grid, .weekday-row{grid-template-columns:repeat(7,minmax(0,1fr));}
+    .cal-cell{min-height:70px; padding:5px;}
+    .post-chip .pidea{display:none;}
+    .detail dl{grid-template-columns:90px 1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="title">Diary of Meiyoung
+      <small>Content Planner — đọc trực tiếp từ data/schedule.json trên GitHub</small>
+    </div>
+    <div class="top-actions">
+      <select id="month-select"></select>
+      <div class="tabs">
+        <button class="tab-btn active" data-view="calendar">Lịch đăng bài</button>
+        <button class="tab-btn" data-view="board">Bảng nội dung</button>
+        <button class="tab-btn" data-view="channel">Theo kênh</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="reminder-banner"></div>
+  <p class="note">🔔 Việc gửi email nhắc lịch do GitHub Actions tự chạy nền — trang này chỉ để bạn xem lại lịch, không cần mở trang này để nhận nhắc.</p>
+
+  <div class="legend" id="legend-root"></div>
+
+  <div id="empty-state" class="empty-state" style="display:none;">
+    <h2>Chưa có dữ liệu</h2>
+    <p>Chưa tìm thấy lịch trong data/schedule.json, hoặc file đang rỗng ({}).</p>
+  </div>
+
+  <section class="view active" id="view-calendar"><div id="calendar-root"></div></section>
+  <section class="view" id="view-board"><div class="board" id="board-root"></div></section>
+  <section class="view" id="view-channel">
+    <div class="channel-toggle" id="channel-toggle"></div>
+    <div class="channel-list" id="channel-list"></div>
+  </section>
+
+  <div class="detail" id="detail">
+    <div class="dhead">
+      <div>
+        <span class="badge" id="d-badge"></span>
+        <h2 id="d-idea"></h2>
+        <div class="dmeta" id="d-meta"></div>
+      </div>
+      <button class="close-btn" onclick="closeDetail()">✕</button>
+    </div>
+    <dl>
+      <dt>Định dạng</dt><dd id="d-format"></dd>
+      <dt>Hình ảnh</dt><dd id="d-visual"></dd>
+      <dt>Caption</dt><dd id="d-caption"></dd>
+      <dt>CTA</dt><dd id="d-cta"></dd>
+    </dl>
+  </div>
+
+</div>
+
+<script>
+const PALETTE = [
+  {main:'#74815B', bg:'#E7EBDD'}, {main:'#C9707C', bg:'#F5DEE1'}, {main:'#C98A2C', bg:'#F3E3C4'},
+  {main:'#4F7B7D', bg:'#DDEAE9'}, {main:'#8574A6', bg:'#E7E1F0'}, {main:'#B98D5E', bg:'#EFE1CE'}
+];
+function paletteFor(name){ let h=0; for(const c of String(name)) h=(h*31+c.charCodeAt(0))>>>0; return PALETTE[h % PALETTE.length]; }
+const WEEKDAY_VN=['CN','T2','T3','T4','T5','T6','T7'];
+const MONTH_VN=['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
+const CHANNEL_ICON={Facebook:'📘', YouTube:'▶️', TikTok:'🎵', Instagram:'📸', Shopee:'🛍️'};
+
+function fmtDate(d){ return `${WEEKDAY_VN[d.getDay()]}, ${d.getDate()}/${d.getMonth()+1}`; }
+function isoDay(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function getMacro(pillar){ return pillar.includes('/') ? pillar.split('/')[0].trim() : pillar.trim(); }
+function getChannels(platform){ return platform.split(/\+|,|&/).map(s=>s.trim()).filter(Boolean); }
+
+let ALL_PLANS = {};
+let CURRENT_KEY = null;
+let DATA = [];
+
+function rowsToPosts(planObj){
+  const start = new Date(planObj.startDate+'T00:00:00');
+  return planObj.rows.map(row=>{
+    const d = new Date(start); d.setDate(d.getDate() + (Number(row.day)-1));
+    return {...row, day:Number(row.day), date:d, macro:getMacro(row.pillar||''), channels:getChannels(row.platform||'')};
+  });
+}
+function getAllPostsAcrossPlans(){
+  let all=[];
+  Object.entries(ALL_PLANS).forEach(([key,plan])=>{ all = all.concat(rowsToPosts(plan).map(p=>({...p, planKey:key}))); });
+  return all;
+}
+
+function populateMonthSelect(){
+  const sel = document.getElementById('month-select'); sel.innerHTML='';
+  const keys = Object.keys(ALL_PLANS).sort();
+  keys.forEach(k=>{
+    const plan = ALL_PLANS[k];
+    const start = new Date(plan.startDate+'T00:00:00');
+    const opt = document.createElement('option');
+    opt.value = k; opt.textContent = `${MONTH_VN[start.getMonth()]} ${start.getFullYear()} (bắt đầu ${start.getDate()}/${start.getMonth()+1})`;
+    sel.appendChild(opt);
+  });
+  CURRENT_KEY = keys[keys.length-1];
+  sel.value = CURRENT_KEY;
+  sel.onchange = ()=>{ CURRENT_KEY = sel.value; renderAll(); };
+}
+
+function renderLegend(){
+  const root = document.getElementById('legend-root'); root.innerHTML='';
+  const macros = [...new Set(DATA.map(p=>p.macro))];
+  macros.forEach(m=>{
+    const pal = paletteFor(m);
+    const span = document.createElement('span');
+    span.innerHTML = `<i class="dot" style="background:${pal.main}"></i> ${m}`;
+    root.appendChild(span);
+  });
+}
+
+function buildCalendar(){
+  const root = document.getElementById('calendar-root'); root.innerHTML='';
+  if(DATA.length===0) return;
+  const map={}; DATA.forEach(p=> map[isoDay(p.date)]=p);
+  const months=[]; let cur=new Date(DATA[0].date.getFullYear(), DATA[0].date.getMonth(),1);
+  const last=DATA[DATA.length-1].date;
+  while(cur.getFullYear()<last.getFullYear() || (cur.getFullYear()===last.getFullYear() && cur.getMonth()<=last.getMonth())){
+    months.push(new Date(cur)); cur.setMonth(cur.getMonth()+1);
+  }
+  const todayIso = isoDay(new Date());
+  months.forEach(monthStart=>{
+    const y=monthStart.getFullYear(), m=monthStart.getMonth();
+    const block=document.createElement('div'); block.className='month-block';
+    block.innerHTML=`<div class="month-label">${MONTH_VN[m]} ${y}</div>`;
+    const wr=document.createElement('div'); wr.className='weekday-row';
+    ['T2','T3','T4','T5','T6','T7','CN'].forEach(w=>{const c=document.createElement('div'); c.textContent=w; wr.appendChild(c);});
+    block.appendChild(wr);
+    const grid=document.createElement('div'); grid.className='cal-grid';
+    const firstOfMonth=new Date(y,m,1); let startOffset=firstOfMonth.getDay()-1; if(startOffset<0) startOffset=6;
+    for(let i=0;i<startOffset;i++){const e=document.createElement('div'); e.className='cal-cell empty'; grid.appendChild(e);}
+    const daysInMonth=new Date(y,m+1,0).getDate();
+    for(let day=1; day<=daysInMonth; day++){
+      const cellDate=new Date(y,m,day);
+      const cell=document.createElement('div'); cell.className='cal-cell'+(isoDay(cellDate)===todayIso?' today':'');
+      cell.innerHTML=`<div class="date-num">${day}</div>`;
+      const post=map[isoDay(cellDate)];
+      if(post){
+        const pal=paletteFor(post.macro);
+        const chip=document.createElement('div'); chip.className='post-chip';
+        chip.style.borderLeftColor=pal.main; chip.style.background=pal.bg;
+        chip.innerHTML=`<span class="ptime">${post.time}</span><span class="pidea">${post.idea}</span>`;
+        chip.onclick=()=>openDetail(post);
+        cell.appendChild(chip);
+      }
+      grid.appendChild(cell);
+    }
+    block.appendChild(grid); root.appendChild(block);
+  });
+}
+
+function buildBoard(){
+  const root=document.getElementById('board-root'); root.innerHTML='';
+  const macros=[...new Set(DATA.map(p=>p.macro))].sort((a,b)=>{
+    const da=Math.min(...DATA.filter(p=>p.macro===a).map(p=>p.day));
+    const db=Math.min(...DATA.filter(p=>p.macro===b).map(p=>p.day));
+    return da-db;
+  });
+  macros.forEach(macro=>{
+    const pal=paletteFor(macro);
+    const items=DATA.filter(p=>p.macro===macro);
+    const col=document.createElement('div'); col.className='board-col';
+    col.innerHTML=`<h3><i class="dot" style="background:${pal.main}"></i> ${macro} <span style="color:var(--ink-soft); font-weight:600; font-size:12px;">(${items.length})</span></h3>`;
+    items.forEach(p=>{
+      const card=document.createElement('div'); card.className='board-card'; card.style.borderLeftColor=pal.main;
+      card.innerHTML=`<div class="bc-top"><span>Ngày ${p.day} · ${fmtDate(p.date)}</span><span>${p.time}</span></div>
+        <div class="bc-idea">${p.idea}</div><div class="bc-format">${p.format} · ${p.platform}</div>`;
+      card.onclick=()=>openDetail(p);
+      col.appendChild(card);
+    });
+    root.appendChild(col);
+  });
+}
+
+let currentChannel=null;
+function buildChannelToggle(){
+  const root=document.getElementById('channel-toggle'); root.innerHTML='';
+  const channels=[...new Set(DATA.flatMap(p=>p.channels))];
+  if(!channels.includes(currentChannel)) currentChannel=channels[0];
+  channels.forEach(ch=>{
+    const count=DATA.filter(p=>p.channels.includes(ch)).length;
+    const card=document.createElement('div'); card.className='channel-card'+(ch===currentChannel?' active':'');
+    card.innerHTML=`<span class="cc-icon">${CHANNEL_ICON[ch]||'📣'}</span><div class="cc-name">${ch}</div><div class="cc-count">${count} bài trong tháng</div>`;
+    card.onclick=()=>{ currentChannel=ch; buildChannelToggle(); buildChannelList(); closeDetail(); };
+    root.appendChild(card);
+  });
+}
+function buildChannelList(){
+  const root=document.getElementById('channel-list'); root.innerHTML='';
+  DATA.filter(p=>p.channels.includes(currentChannel)).forEach(p=>{
+    const pal=paletteFor(p.macro);
+    const row=document.createElement('div'); row.className='channel-row'; row.style.borderLeftColor=pal.main;
+    row.innerHTML=`<div class="cr-date">${fmtDate(p.date)}</div><div class="cr-time">${p.time}</div>
+      <div class="cr-main"><div class="cr-idea">${p.idea}</div><div class="cr-sub">${p.pillar} · ${p.format}</div></div>`;
+    row.onclick=()=>openDetail(p);
+    root.appendChild(row);
+  });
+}
+
+function openDetail(p){
+  const pal=paletteFor(p.macro);
+  const badge=document.getElementById('d-badge');
+  badge.textContent=p.pillar; badge.style.background=pal.bg; badge.style.color=pal.main;
+  document.getElementById('d-idea').textContent=p.idea;
+  document.getElementById('d-meta').textContent=`Ngày ${p.day} · ${fmtDate(p.date)} · ${p.time} · ${p.platform}`;
+  document.getElementById('d-format').textContent=p.format;
+  document.getElementById('d-visual').textContent=p.visual;
+  document.getElementById('d-caption').textContent=p.caption;
+  document.getElementById('d-cta').textContent=p.cta;
+  document.getElementById('detail').classList.add('show');
+  document.getElementById('detail').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+function closeDetail(){ document.getElementById('detail').classList.remove('show'); }
+
+function buildReminderBanner(){
+  const root=document.getElementById('reminder-banner'); root.innerHTML='';
+  const all = getAllPostsAcrossPlans();
+  const todayIso = isoDay(new Date());
+  const tmrw = new Date(); tmrw.setDate(tmrw.getDate()+1);
+  const tmrwIso = isoDay(tmrw);
+  const todays = all.filter(p=>isoDay(p.date)===todayIso);
+  const tmrws = all.filter(p=>isoDay(p.date)===tmrwIso);
+  todays.forEach(p=>{
+    const el=document.createElement('div'); el.className='reminder-item';
+    el.innerHTML=`<span class="rb-tag">HÔM NAY</span><span class="rb-body">${p.idea} — ${p.platform}</span><span class="rb-time">${p.time}</span>`;
+    root.appendChild(el);
+  });
+  tmrws.forEach(p=>{
+    const el=document.createElement('div'); el.className='reminder-item'; el.style.borderLeftColor='var(--ink-soft)';
+    el.innerHTML=`<span class="rb-tag" style="color:var(--ink-soft)">NGÀY MAI</span><span class="rb-body">${p.idea} — ${p.platform}</span><span class="rb-time">${p.time}</span>`;
+    root.appendChild(el);
+  });
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+    closeDetail();
+  };
+});
+
+function renderAll(){
+  const plan = ALL_PLANS[CURRENT_KEY];
+  DATA = plan ? rowsToPosts(plan) : [];
+  renderLegend(); buildCalendar(); buildBoard(); buildChannelToggle(); buildChannelList(); buildReminderBanner();
+}
+
+(async function init(){
+  try{
+    const res = await fetch('./data/schedule.json?_=' + Date.now());
+    ALL_PLANS = await res.json();
+  }catch(e){ ALL_PLANS = {}; }
+  const hasData = Object.keys(ALL_PLANS).length > 0;
+  document.getElementById('empty-state').style.display = hasData ? 'none' : 'block';
+  if(hasData){ populateMonthSelect(); renderAll(); }
+})();
+</script>
+</body>
+</html>
