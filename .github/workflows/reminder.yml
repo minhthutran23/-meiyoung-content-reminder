@@ -1,0 +1,39 @@
+name: Content Reminder
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install
+
+      - name: Kiem tra va gui nhac lich
+        run: node scripts/check-and-send.js
+        env:
+          SMTP_HOST: smtp.gmail.com
+          SMTP_PORT: 465
+          SMTP_SECURE: 'true'
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          REMINDER_EMAIL_TO: ${{ secrets.REMINDER_EMAIL_TO }}
+
+      - name: Luu lai nhat ky da gui (neu co thay doi)
+        run: |
+          git config user.name "reminder-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/sent.json
+          git diff --cached --quiet || git commit -m "chore: cap nhat nhat ky da gui"
+          git push
