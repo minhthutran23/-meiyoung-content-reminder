@@ -27,6 +27,30 @@
   .tab-btn{border:none; background:transparent; padding:9px 16px; border-radius:999px; font-family:'Nunito Sans'; font-weight:700; font-size:13px; color:var(--ink-soft); cursor:pointer;}
   .tab-btn.active{background:var(--ink); color:var(--cream-card);}
 
+  .cal-subtabs{display:flex; gap:6px; margin-bottom:16px; background:var(--cream-card); border:1px solid var(--line); border-radius:999px; padding:4px; width:fit-content;}
+  .subtab-btn{border:none; background:transparent; padding:7px 14px; border-radius:999px; font-family:'Nunito Sans'; font-weight:700; font-size:12px; color:var(--ink-soft); cursor:pointer;}
+  .subtab-btn.active{background:var(--ink); color:var(--cream-card);}
+
+  .cal-nav{display:flex; align-items:center; gap:12px; margin-bottom:16px;}
+  .cal-nav button{border:1.5px solid var(--line); background:var(--cream-card); border-radius:999px; width:34px; height:34px; cursor:pointer; font-size:16px; color:var(--ink);}
+  .cal-nav button:hover{border-color:var(--ink-soft);}
+  .cal-nav .cal-nav-label{font-family:'Fraunces',serif; font-weight:600; font-size:17px; flex:1;}
+  .cal-nav .btn{font-size:12px; padding:7px 14px;}
+
+  .week-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:10px;}
+  .week-col{background:var(--cream-card); border:1px solid var(--line); border-radius:var(--radius); padding:10px; min-height:160px;}
+  .week-col.today{outline:2px solid var(--ink);}
+  .week-col .wc-head{font-size:12px; font-weight:800; color:var(--ink-soft); margin-bottom:8px; text-align:center;}
+  .week-col .wc-head .wc-daynum{display:block; font-family:'Fraunces',serif; font-size:18px; color:var(--ink); font-weight:600; margin-top:2px;}
+  .week-empty{font-size:12px; color:var(--ink-soft); text-align:center; margin-top:20px;}
+
+  .day-view{background:var(--cream-card); border:1px solid var(--line); border-radius:14px; padding:22px;}
+  .day-view .dv-empty{color:var(--ink-soft); font-size:14px; text-align:center; padding:30px 0;}
+  .day-view .dv-idea{font-family:'Fraunces',serif; font-size:22px; font-weight:600; margin:4px 0 10px;}
+  .day-view dl{display:grid; grid-template-columns:110px 1fr; gap:8px 14px; font-size:14px; margin-top:14px;}
+  .day-view dt{font-weight:800; color:var(--ink-soft);}
+  .day-view dd{margin:0;}
+
   #reminder-banner{margin-bottom:18px;}
   .reminder-item{display:flex; align-items:center; gap:12px; background:var(--cream-card); border:1.5px solid var(--line); border-left:5px solid #5C7A52; border-radius:10px; padding:12px 16px; margin-bottom:8px;}
   .reminder-item .rb-tag{font-weight:800; font-size:12px; color:#5C7A52; flex:0 0 auto;}
@@ -118,9 +142,10 @@
 
   <header class="top">
     <div class="title">Diary of Meiyoung
-      <small>Content Planner — upload Excel, tự điền lịch, tự nhắc email</small>
+      <small>Content Planner — nhiều kênh, chọn kênh ở góc trên</small>
     </div>
     <div class="top-actions">
+      <select id="brand-select"></select>
       <select id="month-select"></select>
       <button class="btn primary" id="upload-toggle-btn">+ Tải file tháng mới</button>
       <div class="tabs">
@@ -133,7 +158,7 @@
 
   <div class="upload-panel" id="upload-panel">
     <h3>Tải file Excel cho một tháng</h3>
-    <p class="sub">Trang sẽ tự đọc file, ghép vào lịch và lưu thẳng lên GitHub — vài phút sau hệ thống nhắc lịch sẽ tự nhận ra bài mới.</p>
+    <p class="sub">Trang sẽ tự đọc file, ghép vào lịch và lưu thẳng lên GitHub — vài phút sau hệ thống nhắc lịch sẽ tự nhận ra bài mới. Sau khi lưu, trang cũng sẽ gợi ý những bài nằm ngoài "khung giờ vàng" tham khảo (Facebook, YouTube) — dựa trên số liệu ngành 2026, không phải dữ liệu khán giả thật, chỉ mang tính tham khảo.</p>
 
     <div class="field">
       <label>GitHub Personal Access Token (chỉ lưu trên trình duyệt này, không gửi đi đâu khác)</label>
@@ -141,6 +166,15 @@
     </div>
     <div class="checkbox-row">
       <input type="checkbox" id="pat-remember"> <label for="pat-remember">Lưu token trên trình duyệt này cho lần sau</label>
+    </div>
+
+    <div class="field">
+      <label>Kênh / thương hiệu</label>
+      <select id="brand-upload-select"></select>
+    </div>
+    <div class="field" id="brand-new-field" style="display:none;">
+      <label>Tên kênh mới</label>
+      <input type="text" id="brand-new-input" placeholder="Ví dụ: Belle Fille">
     </div>
 
     <div class="field-row">
@@ -169,7 +203,14 @@
     <p>Bấm "+ Tải file tháng mới" để bắt đầu.</p>
   </div>
 
-  <section class="view active" id="view-calendar"><div id="calendar-root"></div></section>
+  <section class="view active" id="view-calendar">
+    <div class="cal-subtabs" id="cal-subtabs">
+      <button class="subtab-btn active" data-mode="month">Tháng</button>
+      <button class="subtab-btn" data-mode="week">Tuần</button>
+      <button class="subtab-btn" data-mode="day">Ngày</button>
+    </div>
+    <div id="calendar-root"></div>
+  </section>
   <section class="view" id="view-board"><div class="board" id="board-root"></div></section>
   <section class="view" id="view-channel">
     <div class="channel-toggle" id="channel-toggle"></div>
@@ -190,6 +231,7 @@
       <dt>Hình ảnh</dt><dd id="d-visual"></dd>
       <dt>Caption</dt><dd id="d-caption"></dd>
       <dt>CTA</dt><dd id="d-cta"></dd>
+      <dt>Giờ vàng</dt><dd id="d-golden"></dd>
     </dl>
   </div>
 
@@ -217,20 +259,59 @@ function isoDay(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart
 function getMacro(pillar){ return (pillar||'').includes('/') ? pillar.split('/')[0].trim() : (pillar||'').trim(); }
 function getChannels(platform){ return (platform||'').split(/\+|,|&/).map(s=>s.trim()).filter(Boolean); }
 
-let ALL_PLANS = {};
+/* ---------- Khung giờ vàng tham khảo (số liệu ngành 2026 — không phải dữ liệu khán giả thật) ---------- */
+const GOLDEN_HOURS = {
+  Facebook: { weekday: [[8,10],[12,20]], weekend: [[10,12]] },
+  YouTube:  { weekday: [[12,19]],        weekend: [[9,12]] },
+};
+function isWeekend(date){ const d = date.getDay(); return d===0 || d===6; }
+function timeToDecimal(hhmm){ const [h,m] = hhmm.split(':').map(Number); return h + m/60; }
+function checkGoldenHour(time, date, channels){
+  const t = timeToDecimal(time);
+  const weekendFlag = isWeekend(date);
+  const notes = [];
+  (channels||[]).forEach(ch=>{
+    const cfg = GOLDEN_HOURS[ch];
+    if(!cfg) return; // chua co du lieu tham khao cho kenh nay
+    const windows = weekendFlag ? cfg.weekend : cfg.weekday;
+    const inWindow = windows.some(([s,e]) => t >= s && t < e);
+    if(!inWindow){
+      const windowStr = windows.map(([s,e])=> `${String(s).padStart(2,'0')}:00–${String(e).padStart(2,'0')}:00`).join(' hoặc ');
+      notes.push(`${ch}: ngoài khung giờ vàng gợi ý (${weekendFlag?'cuối tuần':'ngày thường'} ${windowStr})`);
+    }
+  });
+  return notes;
+}
+
+let FULL_SCHEDULE = {};   // { brandKey: { label, months: { monthKey: {startDate, rows} } } }
+let CURRENT_BRAND = null;
 let CURRENT_KEY = null;
 let DATA = [];
+
+function slugify(str){
+  return (str||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/đ/g,'d').replace(/Đ/g,'D')
+    .toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g,'-')
+    .replace(/(^-|-$)/g,'') || 'kenh';
+}
 
 function rowsToPosts(planObj){
   const start = new Date(planObj.startDate+'T00:00:00');
   return planObj.rows.map(row=>{
     const d = new Date(start); d.setDate(d.getDate() + (Number(row.day)-1));
-    return {...row, day:Number(row.day), date:d, macro:getMacro(row.pillar), channels:getChannels(row.platform)};
+    const channels = getChannels(row.platform);
+    return {...row, day:Number(row.day), date:d, macro:getMacro(row.pillar), channels,
+      goldenNotes: checkGoldenHour(row.time, d, channels)};
   });
 }
 function getAllPostsAcrossPlans(){
   let all=[];
-  Object.entries(ALL_PLANS).forEach(([key,plan])=>{ all = all.concat(rowsToPosts(plan).map(p=>({...p, planKey:key}))); });
+  Object.entries(FULL_SCHEDULE).forEach(([brandKey,brand])=>{
+    Object.entries(brand.months||{}).forEach(([monthKey,plan])=>{
+      rowsToPosts(plan).forEach(p=> all.push({...p, brandKey, brandLabel: brand.label||brandKey, monthKey}));
+    });
+  });
   return all;
 }
 
@@ -274,11 +355,25 @@ async function saveScheduleToGitHub(schedule, sha, token, monthKey){
 }
 
 /* ---------- rendering (giống bản trước) ---------- */
+function populateBrandSelect(){
+  const sel = document.getElementById('brand-select'); sel.innerHTML='';
+  const keys = Object.keys(FULL_SCHEDULE);
+  keys.forEach(k=>{
+    const opt = document.createElement('option');
+    opt.value = k; opt.textContent = FULL_SCHEDULE[k].label || k;
+    sel.appendChild(opt);
+  });
+  if(!keys.includes(CURRENT_BRAND)) CURRENT_BRAND = keys[0];
+  sel.value = CURRENT_BRAND;
+  sel.onchange = ()=>{ CURRENT_BRAND = sel.value; populateMonthSelect(); renderAll(); };
+}
+
 function populateMonthSelect(){
   const sel = document.getElementById('month-select'); sel.innerHTML='';
-  const keys = Object.keys(ALL_PLANS).sort();
+  const brand = FULL_SCHEDULE[CURRENT_BRAND];
+  const keys = brand ? Object.keys(brand.months||{}).sort() : [];
   keys.forEach(k=>{
-    const plan = ALL_PLANS[k];
+    const plan = brand.months[k];
     const start = new Date(plan.startDate+'T00:00:00');
     const opt = document.createElement('option');
     opt.value = k; opt.textContent = `${MONTH_VN[start.getMonth()]} ${start.getFullYear()} (bắt đầu ${start.getDate()}/${start.getMonth()+1})`;
@@ -287,6 +382,23 @@ function populateMonthSelect(){
   CURRENT_KEY = keys[keys.length-1];
   sel.value = CURRENT_KEY;
   sel.onchange = ()=>{ CURRENT_KEY = sel.value; renderAll(); };
+}
+
+function populateBrandUploadSelect(){
+  const sel = document.getElementById('brand-upload-select'); sel.innerHTML='';
+  Object.keys(FULL_SCHEDULE).forEach(k=>{
+    const opt = document.createElement('option');
+    opt.value = k; opt.textContent = FULL_SCHEDULE[k].label || k;
+    sel.appendChild(opt);
+  });
+  const newOpt = document.createElement('option');
+  newOpt.value = '__new__'; newOpt.textContent = '+ Kênh mới...';
+  sel.appendChild(newOpt);
+  sel.value = CURRENT_BRAND || '__new__';
+  sel.onchange = ()=>{
+    document.getElementById('brand-new-field').style.display = sel.value==='__new__' ? 'block' : 'none';
+  };
+  sel.onchange();
 }
 function renderLegend(){
   const root = document.getElementById('legend-root'); root.innerHTML='';
@@ -327,7 +439,9 @@ function buildCalendar(){
         const pal=paletteFor(post.macro);
         const chip=document.createElement('div'); chip.className='post-chip';
         chip.style.borderLeftColor=pal.main; chip.style.background=pal.bg;
-        chip.innerHTML=`<span class="ptime">${post.time}</span><span class="pidea">${post.idea}</span>`;
+        const warn = post.goldenNotes && post.goldenNotes.length ? ' ⏱️' : '';
+        chip.title = warn ? post.goldenNotes.join(' / ') : '';
+        chip.innerHTML=`<span class="ptime">${post.time}${warn}</span><span class="pidea">${post.idea}</span>`;
         chip.onclick=()=>openDetail(post);
         cell.appendChild(chip);
       }
@@ -336,6 +450,118 @@ function buildCalendar(){
     block.appendChild(grid); root.appendChild(block);
   });
 }
+
+/* ---------- Tuần & Ngày ---------- */
+let calendarMode = 'month';
+let cursorDate = new Date();
+
+function initCursorDate(){
+  if(DATA.length===0) return;
+  const todayIso = isoDay(new Date());
+  const found = DATA.find(p=>isoDay(p.date)===todayIso);
+  cursorDate = found ? new Date(found.date) : new Date(DATA[0].date);
+}
+
+function startOfWeek(d){
+  const r = new Date(d); const wd = r.getDay(); const diff = wd===0 ? -6 : 1-wd; // Thu 2 la dau tuan
+  r.setDate(r.getDate()+diff); r.setHours(0,0,0,0); return r;
+}
+
+function buildWeekView(){
+  const root = document.getElementById('calendar-root'); root.innerHTML='';
+  if(DATA.length===0) return;
+  const map={}; DATA.forEach(p=> map[isoDay(p.date)]=p);
+  const weekStart = startOfWeek(cursorDate);
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate()+6);
+  const todayIso = isoDay(new Date());
+
+  const nav = document.createElement('div'); nav.className='cal-nav';
+  nav.innerHTML = `<button id="week-prev">‹</button>
+    <div class="cal-nav-label">${weekStart.getDate()}/${weekStart.getMonth()+1} – ${weekEnd.getDate()}/${weekEnd.getMonth()+1}/${weekEnd.getFullYear()}</div>
+    <button class="btn" id="week-today">Hôm nay</button>
+    <button id="week-next">›</button>`;
+  root.appendChild(nav);
+  document.getElementById('week-prev').onclick=()=>{ cursorDate.setDate(cursorDate.getDate()-7); buildWeekView(); };
+  document.getElementById('week-next').onclick=()=>{ cursorDate.setDate(cursorDate.getDate()+7); buildWeekView(); };
+  document.getElementById('week-today').onclick=()=>{ cursorDate = new Date(); buildWeekView(); };
+
+  const grid = document.createElement('div'); grid.className='week-grid';
+  for(let i=0;i<7;i++){
+    const d = new Date(weekStart); d.setDate(d.getDate()+i);
+    const col = document.createElement('div'); col.className='week-col'+(isoDay(d)===todayIso?' today':'');
+    col.innerHTML = `<div class="wc-head">${WEEKDAY_VN[d.getDay()]}<span class="wc-daynum">${d.getDate()}</span></div>`;
+    const post = map[isoDay(d)];
+    if(post){
+      const pal = paletteFor(post.macro);
+      const warn = post.goldenNotes && post.goldenNotes.length ? ' ⏱️' : '';
+      const chip = document.createElement('div'); chip.className='post-chip';
+      chip.style.borderLeftColor=pal.main; chip.style.background=pal.bg;
+      chip.title = warn ? post.goldenNotes.join(' / ') : '';
+      chip.innerHTML = `<span class="ptime">${post.time}${warn}</span><span class="pidea">${post.idea}</span>`;
+      chip.onclick=()=>openDetail(post);
+      col.appendChild(chip);
+    } else {
+      col.insertAdjacentHTML('beforeend', `<div class="week-empty">—</div>`);
+    }
+    grid.appendChild(col);
+  }
+  root.appendChild(grid);
+}
+
+function buildDayView(){
+  const root = document.getElementById('calendar-root'); root.innerHTML='';
+  if(DATA.length===0) return;
+  const map={}; DATA.forEach(p=> map[isoDay(p.date)]=p);
+  const todayIso = isoDay(new Date());
+
+  const nav = document.createElement('div'); nav.className='cal-nav';
+  nav.innerHTML = `<button id="day-prev">‹</button>
+    <div class="cal-nav-label">${fmtDate(cursorDate)}/${cursorDate.getFullYear()}</div>
+    <button class="btn" id="day-today">Hôm nay</button>
+    <button id="day-next">›</button>`;
+  root.appendChild(nav);
+  document.getElementById('day-prev').onclick=()=>{ cursorDate.setDate(cursorDate.getDate()-1); buildDayView(); };
+  document.getElementById('day-next').onclick=()=>{ cursorDate.setDate(cursorDate.getDate()+1); buildDayView(); };
+  document.getElementById('day-today').onclick=()=>{ cursorDate = new Date(); buildDayView(); };
+
+  const post = map[isoDay(cursorDate)];
+  const box = document.createElement('div'); box.className='day-view';
+  if(!post){
+    box.innerHTML = `<div class="dv-empty">Không có bài nào trong lịch cho ngày này.</div>`;
+  } else {
+    const pal = paletteFor(post.macro);
+    const goldenLine = (post.goldenNotes && post.goldenNotes.length)
+      ? `<span style="color:#B44B45;">⏱️ ${post.goldenNotes.join(' — ')}</span>`
+      : `<span style="color:#5C7A52;">✅ Trong khung giờ vàng gợi ý</span>`;
+    box.innerHTML = `
+      <span class="badge" style="background:${pal.bg}; color:${pal.main};">${post.pillar}</span>
+      <div class="dv-idea">${post.idea}</div>
+      <div style="font-size:13px; font-weight:700; color:var(--ink-soft);">${post.time} · ${post.platform}</div>
+      <dl>
+        <dt>Định dạng</dt><dd>${post.format}</dd>
+        <dt>Hình ảnh</dt><dd>${post.visual}</dd>
+        <dt>Caption</dt><dd>${post.caption}</dd>
+        <dt>CTA</dt><dd>${post.cta}</dd>
+        <dt>Giờ vàng</dt><dd>${goldenLine}</dd>
+      </dl>`;
+  }
+  root.appendChild(box);
+}
+
+function renderCalendarArea(){
+  if(calendarMode==='month') buildCalendar();
+  else if(calendarMode==='week') buildWeekView();
+  else buildDayView();
+}
+
+document.querySelectorAll('#cal-subtabs .subtab-btn').forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll('#cal-subtabs .subtab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    calendarMode = btn.dataset.mode;
+    renderCalendarArea();
+  };
+});
 function buildBoard(){
   const root=document.getElementById('board-root'); root.innerHTML='';
   const macros=[...new Set(DATA.map(p=>p.macro))].sort((a,b)=>{
@@ -392,6 +618,14 @@ function openDetail(p){
   document.getElementById('d-visual').textContent=p.visual;
   document.getElementById('d-caption').textContent=p.caption;
   document.getElementById('d-cta').textContent=p.cta;
+  const goldenEl = document.getElementById('d-golden');
+  if(p.goldenNotes && p.goldenNotes.length){
+    goldenEl.textContent = '⏱️ ' + p.goldenNotes.join(' — ');
+    goldenEl.style.color = '#B44B45';
+  } else {
+    goldenEl.textContent = '✅ Trong khung giờ vàng gợi ý';
+    goldenEl.style.color = '#5C7A52';
+  }
   document.getElementById('detail').classList.add('show');
   document.getElementById('detail').scrollIntoView({behavior:'smooth', block:'nearest'});
 }
@@ -404,12 +638,12 @@ function buildReminderBanner(){
   const tmrwIso = isoDay(tmrw);
   all.filter(p=>isoDay(p.date)===todayIso).forEach(p=>{
     const el=document.createElement('div'); el.className='reminder-item';
-    el.innerHTML=`<span class="rb-tag">HÔM NAY</span><span class="rb-body">${p.idea} — ${p.platform}</span><span class="rb-time">${p.time}</span>`;
+    el.innerHTML=`<span class="rb-tag">HÔM NAY</span><span class="rb-body"><b>[${p.brandLabel}]</b> ${p.idea} — ${p.platform}</span><span class="rb-time">${p.time}</span>`;
     root.appendChild(el);
   });
   all.filter(p=>isoDay(p.date)===tmrwIso).forEach(p=>{
     const el=document.createElement('div'); el.className='reminder-item'; el.style.borderLeftColor='var(--ink-soft)';
-    el.innerHTML=`<span class="rb-tag" style="color:var(--ink-soft)">NGÀY MAI</span><span class="rb-body">${p.idea} — ${p.platform}</span><span class="rb-time">${p.time}</span>`;
+    el.innerHTML=`<span class="rb-tag" style="color:var(--ink-soft)">NGÀY MAI</span><span class="rb-body"><b>[${p.brandLabel}]</b> ${p.idea} — ${p.platform}</span><span class="rb-time">${p.time}</span>`;
     root.appendChild(el);
   });
 }
@@ -423,10 +657,12 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   };
 });
 function renderAll(){
-  const plan = ALL_PLANS[CURRENT_KEY];
+  const brand = FULL_SCHEDULE[CURRENT_BRAND];
+  const plan = brand ? brand.months[CURRENT_KEY] : null;
   document.getElementById('empty-state').style.display = plan ? 'none' : 'block';
   DATA = plan ? rowsToPosts(plan) : [];
-  renderLegend(); buildCalendar(); buildBoard(); buildChannelToggle(); buildChannelList(); buildReminderBanner();
+  initCursorDate();
+  renderLegend(); renderCalendarArea(); buildBoard(); buildChannelToggle(); buildChannelList(); buildReminderBanner();
 }
 
 /* ---------- upload ---------- */
@@ -436,6 +672,7 @@ function toggleUploadPanel(show){
 }
 document.getElementById('upload-toggle-btn').onclick = ()=>{
   toggleUploadPanel(true);
+  populateBrandUploadSelect();
   const saved = localStorage.getItem('meiyoung_gh_pat');
   if(saved){ document.getElementById('pat-input').value = saved; document.getElementById('pat-remember').checked = true; }
 };
@@ -445,12 +682,24 @@ document.getElementById('confirm-upload-btn').onclick = async ()=>{
   const remember = document.getElementById('pat-remember').checked;
   const fileInput = document.getElementById('file-input');
   const dateInput = document.getElementById('start-date-input');
+  const brandSel = document.getElementById('brand-upload-select');
+  const brandNewInput = document.getElementById('brand-new-input');
   const statusEl = document.getElementById('upload-status');
   statusEl.className=''; statusEl.textContent='';
 
   if(!token){ statusEl.className='err'; statusEl.textContent='Thiếu Personal Access Token.'; return; }
   if(!fileInput.files[0]){ statusEl.className='err'; statusEl.textContent='Vui lòng chọn file Excel.'; return; }
   if(!dateInput.value){ statusEl.className='err'; statusEl.textContent='Vui lòng chọn ngày đăng bài đầu tiên.'; return; }
+
+  let brandKey, brandLabel;
+  if(brandSel.value === '__new__'){
+    brandLabel = brandNewInput.value.trim();
+    if(!brandLabel){ statusEl.className='err'; statusEl.textContent='Vui lòng nhập tên kênh mới.'; return; }
+    brandKey = slugify(brandLabel);
+  } else {
+    brandKey = brandSel.value;
+    brandLabel = (FULL_SCHEDULE[brandKey] && FULL_SCHEDULE[brandKey].label) || brandKey;
+  }
 
   statusEl.textContent = 'Đang xử lý...';
   try{
@@ -491,20 +740,36 @@ document.getElementById('confirm-upload-btn').onclick = async ()=>{
     const badTime = rows.find(r=>!/^\d{1,2}:\d{2}$/.test(r.time));
     if(badTime) throw new Error(`Giờ đăng của Ngày ${badTime.day} sai định dạng HH:mm: "${badTime.time}"`);
 
+    const advisories = [];
+    rows.forEach(r=>{
+      const d = new Date(dateInput.value+'T00:00:00'); d.setDate(d.getDate() + (r.day-1));
+      const notes = checkGoldenHour(r.time, d, getChannels(r.platform));
+      if(notes.length) advisories.push(`Ngày ${r.day} (${r.time}): ${notes.join('; ')}`);
+    });
+
     statusEl.textContent = 'Đang lấy dữ liệu hiện tại từ GitHub...';
     const { schedule, sha } = await fetchScheduleFromGitHub();
 
     const monthKey = dateInput.value.slice(0,7);
-    schedule[monthKey] = { startDate: dateInput.value, rows };
+    if(!schedule[brandKey]) schedule[brandKey] = { label: brandLabel, months: {} };
+    schedule[brandKey].label = brandLabel;
+    schedule[brandKey].months[monthKey] = { startDate: dateInput.value, rows };
 
     statusEl.textContent = 'Đang lưu lên GitHub...';
-    await saveScheduleToGitHub(schedule, sha, token, monthKey);
+    await saveScheduleToGitHub(schedule, sha, token, `${brandKey}/${monthKey}`);
 
-    ALL_PLANS = schedule;
-    statusEl.className='ok'; statusEl.textContent=`✅ Đã điền ${rows.length} bài vào lịch tháng ${monthKey}. Hệ thống nhắc lịch sẽ tự nhận trong ít phút.`;
+    FULL_SCHEDULE = schedule;
+    CURRENT_BRAND = brandKey;
+    statusEl.className='ok';
+    let msg = `✅ Đã điền ${rows.length} bài vào lịch "${brandLabel}" — tháng ${monthKey}. Hệ thống nhắc lịch sẽ tự nhận trong ít phút.`;
+    if(advisories.length){
+      msg += `\n\n⏱️ ${advisories.length} bài nằm ngoài khung giờ vàng gợi ý (không bắt buộc đổi, chỉ tham khảo):\n` + advisories.join('\n');
+    }
+    statusEl.textContent = msg;
+    populateBrandSelect(); document.getElementById('brand-select').value = brandKey;
     populateMonthSelect(); document.getElementById('month-select').value = monthKey; CURRENT_KEY = monthKey;
     renderAll();
-    setTimeout(()=>toggleUploadPanel(false), 2000);
+    if(advisories.length===0) setTimeout(()=>toggleUploadPanel(false), 2000);
   }catch(err){
     console.error(err);
     statusEl.className='err'; statusEl.textContent='❌ '+err.message;
@@ -515,11 +780,11 @@ document.getElementById('confirm-upload-btn').onclick = async ()=>{
 (async function init(){
   try{
     const { schedule } = await fetchScheduleFromGitHub();
-    ALL_PLANS = schedule;
-  }catch(e){ ALL_PLANS = {}; }
-  const hasData = Object.keys(ALL_PLANS).length > 0;
+    FULL_SCHEDULE = schedule;
+  }catch(e){ FULL_SCHEDULE = {}; }
+  const hasData = Object.keys(FULL_SCHEDULE).length > 0;
   document.getElementById('empty-state').style.display = hasData ? 'none' : 'block';
-  if(hasData){ populateMonthSelect(); renderAll(); }
+  if(hasData){ populateBrandSelect(); populateMonthSelect(); renderAll(); }
 })();
 </script>
 </body>
